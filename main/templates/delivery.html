@@ -1,0 +1,452 @@
+{% extends "base.html" %}
+
+{% load myfilters %}
+
+{% block delivery %}class="active"{% endblock %}  {% block delivery-span %}<span class="sr-only">(current)</span>{% endblock %}
+
+{% block content %}
+        <script>
+
+            $(document).ready( function () {
+                
+                $("#id_delivery_date").datepicker({ language: 'ru', });
+                $("#id_delivery_date").datepicker("option", "dateFormat", "yy-mm-dd");
+
+                //$("#own_shop").selectmenu();
+
+                $('#delivery').DataTable({
+                    "language": {
+                        "search": "Поиск:",
+                        "lengthMenu": "Показывать по _MENU_ записей на странице",
+                        "info": "Отображается  страница _PAGE_ из _PAGES_",
+                        "infoEmpty": "Отображено с 0 по 0 из 0 записей",
+                        "zeroRecords": "Не найдено результатов",
+                        "paginate": {
+                            "first":      "Первая",
+                            "last":       "Последняя",
+                            "next":       "Вперед",
+                            "previous":   "Назад"
+                        },
+                    },
+                    "order": [[ 1, "desc" ]],
+                    rowReorder: {
+                        selector: 'td:nth-child(2)'
+                    },
+                    responsive: true
+                });
+
+                $("input[name=is_custom_product]").on('change', function() {
+                    //console.log($(this).attr('id'));
+                    if ($(this).attr('id') == 'id_is_custom_product_0') {
+                        $('#id_custom_product').attr('disabled', '');
+                        $('#id_custom_price').attr('disabled', '');
+                        $('#id_is_custom_price' ).prop('checked', false );
+                        $("#id_storage_product").prop('disabled', false).trigger('chosen:updated');
+                        $('#id_is_custom_price' ).removeAttr('disabled');
+                    }
+                    if ($(this).attr('id') == 'id_is_custom_product_1') {
+                        $('#id_custom_product').removeAttr('disabled');
+                        $('#id_custom_price').removeAttr('disabled');
+                        $('#id_is_custom_price' ).prop('checked', true );
+                        $("#id_storage_product").prop('disabled', true).trigger('chosen:updated');
+                        $('#id_is_custom_price' ).attr('disabled', '');
+                    }
+                });
+
+                $("input[name=is_custom_price]").on('change', function() {
+                    if ($(this).prop('checked')) {
+                        $('#id_custom_price').removeAttr('disabled');
+                    } else {
+                        $('#id_custom_price').attr('disabled', '');
+                    }
+                });
+                //$("#id_storage_product").addClass('form-control');
+                //$("#id_storage_product").chosen({allow_single_deselect:true});
+                $('a[aria-controls="new"]').on('shown.bs.tab', function (e) {
+                  console.log("show create tab");
+                  $('.link-formset').formset({
+                        addText: 'Добавить товар',
+                        deleteText: 'Удалить',
+                        prefix: 'deliveryproduct_set',
+                    });
+                  $("#id_storage_product").chosen({allow_single_deselect:true});
+                })
+
+                $('#id_storage_product').on('change', function(event, params) {
+                    if(event.target == this){
+                        pk_list = $(this).val();
+                    }
+
+
+
+                    $.ajax({
+                        url: '/get_storage_price/',
+                        type: 'POST',
+                        data: JSON.stringify(pk_list),
+                        dataType: 'json',
+                        beforeSend: function (xhr, settings) {
+                            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                                xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}")
+                            }
+                        },
+                        success: function () {
+
+                        }
+                    }).done(function(data) {
+                        $("#storage-product-price").html('<span style="margin-top: 12px;display: inline-block;">Цена склада:&nbsp;</span><span>'+data.result+' р. </span>');
+                    });
+
+
+                });
+
+                $('[data-toggle="tooltip"]').tooltip();
+
+                var no_destroy = 0;
+                var safe;
+
+                function quick_edit(item) {
+                    
+                    // item.html(select);
+                    item.css({width: 151, });
+                    item.find('span').css({'display': 'none'});
+                    item.find('form').css({'display': 'block'});
+                    item.off();
+                    //console.log("click off");
+                    
+                    item.find(":input:visible:enabled:first", item.find("form")).focus();
+                    //item.find("form").focus();
+
+                    item.find("select").on('change', function(event, params) { // главный обработчик изменения статуса, в его теле будет происходить AJAX магия
+                        setTimeout(function() {
+                            //console.log(item.find("form").serialize());
+                            var data = item.find("form").serialize()
+                            
+                            $.ajax({
+                                url: '/add_delivery_status/',
+                                type: 'POST',
+                                data: data,
+                                //dataType: 'json',
+                                beforeSend: function (xhr, settings) {
+                                    if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                                        xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}")
+                                    }
+                                },
+                                success: function () {
+
+                                }
+                            }).done(function(data) {
+                                //$("#storage-product-price").html('<span style="margin-top: 12px;display: inline-block;">Цена склада:&nbsp;</span><span>'+data.result+' р. </span>');
+                                console.log("send change");
+                                console.log("code: "+data.code);
+                                console.log("label: "+data.label);
+                                clear_and_on(item, 0, data.result, data.label);
+                            });
+                            
+                        }, 200);
+                    })
+
+                    item.find('.notify').on('change', function(event, params) { // забираем фокус с формы и запрещаем действие по focusout с нее
+                        $(this).focus(); // ставим фокус на чекбокс
+                        no_destroy = 1; // собственно запрет
+                        //$('.status_q form').off('focusout');
+                        //console.log("focus in checkbox and: "+no_destroy);
+
+
+                        item.find('select').on('click', function(event, params) { // тут мы опять же предотвращаем действие по focusout с чекбокса
+                            no_destroy = 1;
+                            $(this).focusout(function(){
+                                //console.log("focus out from hand");
+                                no_destroy = 0;
+                                clear_and_on(item, no_destroy);
+                            });
+
+                        });
+
+
+                        $(this).focusout(function() { // вызываем уничтожение селекта и возвращаем click event на ячейку статуса
+                            no_destroy = 0;         // разрешаем вызов функции clear_and_on через
+                            setTimeout(function() { // 200 миллисекунд
+                                clear_and_on(item, no_destroy);
+                            }, 200);
+                        });
+                    });
+
+                    item.find('form').focusout(function(){
+                        //console.log("focus out");
+                        setTimeout(function() {
+                            clear_and_on(item, no_destroy);
+                        }, 200);
+                    })
+                }
+
+                function clear_and_on(item, check, text, label) {
+                    if (!check) {
+                        //console.log("check: "+check);
+                        if (label !== undefined && text !== undefined) {
+                            item.find('span').removeAttr('class');
+                            item.find('span').attr('class', 'label '+label);
+                            //console.log("label2: "+label);
+                            item.find('span').text(text);
+                        }
+                        
+                        item.find('span').css({'display': ''});
+                        item.find('form').css({'display': 'none'});
+                        setTimeout(function() {
+                            item.on("click", function(event) { quick_edit($(this)); });
+                        }, 200);
+                        item.css({width: ''})
+                        no_destroy = 0;
+                    }
+                }
+
+                $('.status_q').on("click", function(event) {
+                    safe = $(this).html();
+                    quick_edit($(this));
+                });
+                
+            });
+
+        </script>
+
+        <div class="content-tabs" >
+
+          <!-- Nav tabs -->
+          <ul class="nav nav-tabs" role="tablist">
+            <li role="presentation" class="active"><a href="#home" aria-controls="home" role="tab" data-toggle="tab">Доставки</a></li>
+            <li role="presentation"><a href="#new" aria-controls="new" role="tab" data-toggle="tab">Новая доставка</a></li>
+          </ul>
+
+          <!-- Tab panes -->
+          <div class="tab-content">
+            <div role="tabpanel" class="tab-pane active" id="home">
+                <table id="delivery" class="table table-striped" cellspacing="0" width="100%" style="    overflow: scroll;">
+                    <thead>
+                        <tr>
+                            <th>Номер</th>
+                            <th>Дата</th>
+                            <th>Магазин</th>
+                            <th>Товары</th>
+                            <th>C клиента</th>
+                            <th>Доставка</th>
+                            <th>Телефон, адрес, время</th>
+                            <th>Курьер</th>
+                            <th>Статус</th>
+                            <th>Настройки</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in delivery.all %}
+                        <tr>
+                            <td>{{ item.id }}</td>
+                            <td>{{ item.delivery_date|date:"d.m.Y" }}</td>
+                            <td>{{ item.shop }}</td>
+                            <td>{{ item.total_product }}</td>
+                            <td>{{ item.client_price }}</td>
+                            <td>{{ item.delivery_fromclient }} <small>({{ item.delivery_price }})</small></td>
+                            <td>{{ item.tel_addr_time }}</td>
+                            <td>{{ item.courier }}</td>
+                            <td class="status_q" id="{{ item.pk }}">
+                                <span class="label {{ item.deliverystatuslist_set.last.status.label }}">{{ item.deliverystatuslist_set.last.status }}</span>
+                                <form style="display: none">
+                                    <input name="delivery" type="hidden" value="{{ item.id }}"><select class="form-control input-sm input-qe" name="value">';
+                                    {% for st in status.all %}
+                                        <option value="{{ st.code }}" {% if item.deliverystatuslist_set.last.status.code == st.code %}selected{% endif %}>{{ st.status }}</option>
+                                    {% endfor %}
+                                    </select><br>
+                                    <input type="checkbox" name="notify" class="notify" value="1"><label for="notify" style="font-size:12px">&nbsp;уведомить партнера</label>
+                                </form>
+                            </td>
+                            <td>
+                                <a href="{% url 'delivery_show' item.pk %}"
+                                    class="btn btn-success"
+                                    role="button" 
+                                    data-toggle="tooltip"
+                                    data-html="true"
+                                    data-placement="left"
+                                    title='<h5>Статус: <span class="label label-default">{{ item.deliverystatuslist_set.last.status }}</span></h5>
+                                        <hr>
+                                        <h5>Дата: <span class="label label-default">{{ item.delivery_date }}</span></h5>
+                                        <h5>Адрес доставки: <span class="label label-default">{{ item.address }}</span></h5>
+                                        <h5>Телефон клиента: <span class="label label-default">{{ item.phone }}</span></h5>
+                                        <h5>Время доставки: <span class="label label-default">{{ item.time }}</span></h5>
+                                        <h5>Курьер: <span class="label label-default">{{ item.courier }}</span></h5>
+                                        <hr>
+                                        <h5>Магазин: <span class="label label-default">{{ item.shop }}</span></h5>
+                                        <h5>Товары: <span class="label label-default">{{ item.total_product }}</span></h5>
+                                        <hr>
+                                        <h5>Стоимость: <span class="label label-default">{{ item.total_price }} р.</span></h5>
+                                        <h5>Доставка с клиента: <span class="label label-default">{{ item.delivery_fromclient }} р.</span></h5>
+                                        <h5>Стоимость доставки для партнера: <span class="label label-default">{{ item.delivery_price }} р.</span></h5>
+                                        <h5>К выплате патнету: <span class="label label-default">{{ item.to_partner }} р.</span></h5>'>
+                                    <i class="fa fa-eye" aria-hidden="true"></i>
+                                </a>
+                                <a href="{% url 'delivery_edit' item.pk %}"
+                                    class="btn btn-primary"
+                                    role="button" data-toggle="tooltip"
+                                    data-placement="bottom"
+                                    title="Редактировать">
+                                    <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div role="tabpanel" class="tab-pane" id="new">
+                <form action="{% url 'delivery' %}" method="post" class="form-horizontal">
+                    {% csrf_token %}
+                    {{ form.non_field_errors }}
+                    <div class="form-group">
+                        {{ form.shop.errors }}
+                        <label for="{{ form.shop.id_for_label }}" class="col-sm-2 control-label">Выберите магазин</label>
+                        <div class="col-sm-10">
+                            {{ form.shop }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-6">
+                            <div class="product-box">
+                                <div class="radio" style="text-align: center;">
+                                  <label>
+                                    <input id="id_is_custom_product_0" name="is_custom_product" type="radio" value="False" checked>
+                                  </label>
+                                </div>
+                                <label for="" class="control-label">Товары со склада</label>
+                                {{ formset.management_form }}
+                                {% for form in formset.forms %}
+                                    <div id="{{ form.prefix }}-row" class="form-group row link-formset ">
+                                        {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                                        <label class="sr-only" for="{{ form.product.id_for_label }}">Товар</label>
+                                        <div class="col-sm-6">
+                                            {{ form.product.errors }}
+                                            
+                                            {{ form.product }}
+                                        </div>
+                                        <label class="col-sm-2 control-label" for="{{ form.count.id_for_label }}">Количество</label>
+                                        <div class="col-sm-2">
+                                            {{ form.count.errors }}
+                                            
+                                            {{ form.count }}
+                                        </div>
+                                        <div class="col-sm-2">
+                                            {% if formset.can_delete %}{{ form.DELETE }}{% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                                <script type="text/javascript">
+                                    $(function() {
+                                        
+                                    });
+                                </script>
+                                <div id="storage-product-price"></div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="product-box">
+                                <div class="radio" style="text-align: center;">
+                                  <label>
+                                    <input id="id_is_custom_product_1" name="is_custom_product" type="radio" value="True">
+                                  </label>
+                                </div>
+                                {{ form.custom_product.errors }}
+                                <label for="{{ form.custom_product.id_for_label }}" class="control-label">Другой товар</label>
+                                {{ form.custom_product|addattr:"disabled," }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.custom_price.id_for_label }}" class="col-sm-2 control-label">Своя цена</label>
+                        <div class="col-sm-10">
+                            <div class="input-group">
+                                <span class="input-group-addon">
+                                    <input id="id_is_custom_price" name="is_custom_price" type="checkbox">
+                                </span>
+                                {{ form.custom_price|addattr:"disabled," }}
+                            </div><!-- /input-group -->
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form.delivery_fromclient.errors }}
+                        <label for="{{ form.delivery_fromclient.id_for_label }}" class="col-sm-2 control-label">Доставка с клиента</label>
+                        <div class="col-sm-10">
+                            {{ form.delivery_fromclient }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form.delivery_price.errors }}
+                        <label for="{{ form.delivery_price.id_for_label }}" class="col-sm-2 control-label">Стоимость доставки партнера</label>
+                        <div class="col-sm-10">
+                            {{ form.delivery_price }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form.address.errors }}
+                        <label for="{{ form.address.id_for_label }}" class="col-sm-2 control-label">Адрес доставки</label>
+                        <div class="col-sm-10">
+                            {{ form.address }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form.delivery_date.errors }}
+                        <label for="{{ form.delivery_date.id_for_label }}" class="col-sm-2 control-label">Дата доставки</label>
+                        <div class="col-sm-10">
+                            {{ form.delivery_date }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form.phone.errors }}
+                        <label for="{{ form.phone.id_for_label }}" class="col-sm-2 control-label">Телефон клиента</label>
+                        <div class="col-sm-10">
+                            {{ form.phone }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form.time.errors }}
+                        <label for="{{ form.time.id_for_label }}" class="col-sm-2 control-label">Время доставки</label>
+                        <div class="col-sm-10">
+                            {{ form.time }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form.courier.errors }}
+                        <label for="{{ form.courier.id_for_label }}" class="col-sm-2 control-label">Курьер</label>
+                        <div class="col-sm-10">
+                            {{ form.courier }}
+                        </div>
+                    </div>
+
+                    <input class="btn btn-success" type="submit" value="Создать" />
+                </form>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">История изменений</div>
+            <div class="panel-body">
+                <table id="delivery" class="table table-striped" cellspacing="0" width="100%" style="    overflow: scroll;">
+                    <thead>
+                        <tr>
+                            <th>Дата</th>
+                            <th>Изменения</th>
+                            <th>Магазин</th>
+                            <th>Пользователь</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in deliverylog %}
+                        <tr>
+                            <td>{{ item.date|date:"d.m.Y H:i:s" }}</td>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.shop }}</td>
+                            <td>{{ item.user }}</td>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+{% endblock %}

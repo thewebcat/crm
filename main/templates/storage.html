@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block storage %}class="active"{% endblock %}  {% block storage-span %}<span class="sr-only">(current)</span>{% endblock %}
+
+{% block content %}
+        <script>
+
+            $(document).ready( function () {
+
+                var myDate = new Date();
+                var displayTime = (myDate.getHours()<10?'0':'') + myDate.getHours() + ':' + (myDate.getMinutes()<10?'0':'') + myDate.getMinutes() + ':' + (myDate.getSeconds()<10?'0':'') + myDate.getSeconds();
+
+                $("input[type=submit], a, button").button();
+                //$('input').addClass("text ui-widget-content ui-corner-all");
+                //$('#add_new_goods').dialog();
+                
+                /* НАЧАЛО Приход товаров */
+                $(".add-goods-btn").on("click", function() {
+                    var add_dialog = $("#add-goods");
+                    var action = add_dialog.find('form').attr("action");
+                    action = action.replace("$", $(this).attr("id"));
+                    add_dialog.find("form").attr("action", action);
+                    add_dialog.find("#add-goods-time").val(displayTime);
+                    add_dialog.modal();
+                });
+                /* КОНЕЦ Приход товаров */
+
+                /* НАЧАЛО Списание товаров */
+                $(".remove-goods-btn").on("click", function() {
+                    var remove_dialog = $("#remove-goods");
+                    var action = remove_dialog.find('form').attr("action");
+                    action = action.replace("$", $(this).attr("id"));
+                    remove_dialog.find("form").attr("action", action);
+                    remove_dialog.find("#remove-goods-time").val(displayTime);
+                    remove_dialog.modal();
+                });
+                /* КОНЕЦ Списание товаров */
+
+                $("#add-goods-date").datepicker();
+                $("#add-goods-date").datepicker("option", "dateFormat", "yy-mm-dd");
+
+                $("#remove-goods-date").datepicker();
+                $("#remove-goods-date").datepicker("option", "dateFormat", "yy-mm-dd");
+
+                //$("#own_shop").selectmenu();
+                
+
+                $('#storage').DataTable({
+                    "language": {
+                        "search": "Поиск:",
+                        "lengthMenu": "Показывать по _MENU_ записей на странице",
+                        "info": "Отображается  страница _PAGE_ из _PAGES_",
+                        "infoEmpty": "Отображено с 0 по 0 из 0 записей",
+                        "zeroRecords": "Не найдено результатов",
+                        "paginate": {
+                            "first":      "Первая",
+                            "last":       "Последняя",
+                            "next":       "Вперед",
+                            "previous":   "Назад"
+                        },
+                    }
+                });
+
+            });
+        </script>
+        
+        <div class="panel panel-default">
+            <div class="panel-heading">Склад</div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <a type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#create-goods"><snap>Добавить новый товар на склад</snap></a>    
+                </div>
+                
+                <table id="storage" class="table table-striped" cellspacing="0" width="100%">
+                    <thead>
+                        <tr><th>Наименование</th><th>Остаток</th><th>Принадлежит магазину</th><th>Последнее изменение</th><th>Действия</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for goods in goods_list.all %}
+                        <tr>
+                            
+                            <td>{{ goods.name }}</td>
+                            <td>{{ goods.count_logs }}</td>
+                            <td>{{ goods.own_shop }}</td>
+                            <td>{{ goods.last_coming }}</td>
+                            <td>
+                                <a href="javascript:void(0)"
+                                    id="{{ goods.pk }}"
+                                    class="btn btn-success add-goods-btn"
+                                    role="button" data-toggle="tooltip"
+                                    data-placement="bottom"
+                                    title="Приход">
+                                    <span class="" aria-hidden="true">Приход</span>
+                                </a>
+                                <a href="javascript:void(0)"
+                                    id="{{ goods.pk }}"
+                                    class="btn btn-primary remove-goods-btn"
+                                    role="button" data-toggle="tooltip"
+                                    data-placement="bottom"
+                                    title="Списание">
+                                    <span class="" aria-hidden="true">Списание</span>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">История</div>
+            <div class="panel-body">
+                <table id="logs" class="table table-striped" cellspacing="0" width="100%">
+                    <thead>
+                        <tr><th>Магазин</th><th>Товар</th><th>Комментарий</th><th>Кол-во</th><th>Дата и время</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs_list.all %}
+                        <tr>
+                            <td>{{ log.shop }}</td><td>{{ log.storage }}</td><td>{{ log.log_type }}</td><td>{{ log.count }}</td><td>{{ log.date }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+
+
+        <div class="modal fade" id="add-goods" tabindex="-1" role="dialog" aria-labelledby="add-goodsLabel">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="add-goodsLabel">Поступление товара</h4>
+                    </div>
+                    <form id="add-goods-form" action="/add_goods/$/" method="POST">
+                        <div class="modal-body">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="count">Количество поступления</label>
+                                <input type="text" name="count" class="form-control" required="">
+                            </div>
+                            <div class="form-group">
+                                <label for="add-goods-date">Дата поступления</label>
+                                <input id="add-goods-date" type="text" name="date" class="form-control" required="">
+                            </div>
+                            <div class="form-group">
+                                <label for="add-goods-time">Время поступления:</label>
+                                <input id="add-goods-time" type="text" name="time" class="form-control" required="">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Закрыть</button>
+                            <button type="submit" class="btn btn-primary">Сохранить</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="remove-goods" tabindex="-1" role="dialog" aria-labelledby="remove-goodsLabel">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="remove-goodsLabel">Списание товара</h4>
+                    </div>
+                    <form id="remove-goods-form" action="/remove_goods/$/" method="POST">
+                        <div class="modal-body">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="count">Количество списания</label>
+                                <input type="text" name="count" class="form-control" required="">
+                            </div>
+                            <div class="form-group">
+                                <label for="remove-goods-date">Дата списания</label>
+                                <input id="remove-goods-date" type="text" name="date" class="form-control" required="">
+                            </div>
+                            <div class="form-group">
+                                <label for="remove-goods-time">Время списания:</label>
+                                <input id="remove-goods-time" type="text" name="time" class="form-control" required="">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Закрыть</button>
+                            <button type="submit" class="btn btn-primary">Сохранить</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="modal fade" id="create-goods" tabindex="-1" role="dialog" aria-labelledby="create-goodsLabel">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="create-goodsLabel">Добавление нового товара</h4>
+                    </div>
+                    <form id="create-goods-form" action="/create_goods/" method="POST">
+                        <div class="modal-body">
+                            
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="name">Наименование товара</label>
+                                <input type="text" name="name" id="name" class="form-control" required="">
+                            </div>
+                            <div class="form-group">
+                                <label for="price">Цена</label>
+                                <input type="text" name="price" id="price" class="form-control" required="">
+                            </div>
+                            <div class="form-group">
+                                <label for="count">Начальный остаток</label>
+                                <input type="text" name="count" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="own_shop">Выберите магазин</label>
+                                <select name="own_shop" id="own_shop" class="form-control" required="">
+                                {% for shop in shops_list %}
+                                <option{% if forloop.first %} selected="selected"{% endif %}>{{ shop.alias }}</option>
+                                {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Закрыть</button>
+                            <button type="submit" class="btn btn-primary" >Сохранить</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+{% endblock %}

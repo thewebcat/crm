@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block cash %}class="active"{% endblock %}  {% block cash-span %}<span class="sr-only">(current)</span>{% endblock %}
+
+{% block content %}
+        <script>
+
+            $(document).ready( function () {
+
+                var myDate = new Date();
+                var displayTime = (myDate.getHours()<10?'0':'') + myDate.getHours() + ':' + (myDate.getMinutes()<10?'0':'') + myDate.getMinutes() + ':' + (myDate.getSeconds()<10?'0':'') + myDate.getSeconds();
+
+                $("input[type=submit], a, button").button();
+                //$('input').addClass("text ui-widget-content ui-corner-all");
+                //$('#add_new_goods').dialog();
+                
+                /* НАЧАЛО Приход товаров */
+                $(".add-goods-btn").on("click", function() {
+                    var add_dialog = $("#add-goods");
+                    var action = add_dialog.find('form').attr("action");
+                    action = action.replace("$", $(this).attr("id"));
+                    add_dialog.find("form").attr("action", action);
+                    add_dialog.find("#add-goods-time").val(displayTime);
+                    add_dialog.modal();
+                });
+                /* КОНЕЦ Приход товаров */
+
+                /* НАЧАЛО Списание товаров */
+                $(".remove-goods-btn").on("click", function() {
+                    var remove_dialog = $("#remove-goods");
+                    var action = remove_dialog.find('form').attr("action");
+                    action = action.replace("$", $(this).attr("id"));
+                    remove_dialog.find("form").attr("action", action);
+                    remove_dialog.find("#remove-goods-time").val(displayTime);
+                    remove_dialog.modal();
+                });
+                /* КОНЕЦ Списание товаров */
+
+                $("#add-goods-date").datepicker();
+                $("#add-goods-date").datepicker("option", "dateFormat", "yy-mm-dd");
+
+                $("#remove-goods-date").datepicker();
+                $("#remove-goods-date").datepicker("option", "dateFormat", "yy-mm-dd");
+
+                //$("#own_shop").selectmenu();
+                
+
+                $('#cache-log').DataTable({
+                    "language": {
+                        "search": "Поиск:",
+                        "lengthMenu": "Показывать по _MENU_ записей на странице",
+                        "info": "Отображается  страница _PAGE_ из _PAGES_",
+                        "infoEmpty": "Отображено с 0 по 0 из 0 записей",
+                        "zeroRecords": "Не найдено результатов",
+                        "paginate": {
+                            "first":      "Первая",
+                            "last":       "Последняя",
+                            "next":       "Вперед",
+                            "previous":   "Назад"
+                        },
+                    },
+                    "order": [[ 0, "desc" ]],
+                });
+
+                $("input[name=is_custom_product]").on('change', function() {
+                    //console.log($(this).attr('id'));
+                    if ($(this).attr('id') == 'id_is_custom_product_0') {
+                        $('#id_custom_product').attr('disabled', '');
+                        $('#id_custom_price').attr('disabled', '');
+                        $('#id_is_custom_price' ).prop('checked', false );
+                        $("#id_storage_product").prop('disabled', false).trigger('chosen:updated');
+                        $('#id_is_custom_price' ).removeAttr('disabled');
+                    }
+                    if ($(this).attr('id') == 'id_is_custom_product_1') {
+                        $('#id_custom_product').removeAttr('disabled');
+                        $('#id_custom_price').removeAttr('disabled');
+                        $('#id_is_custom_price' ).prop('checked', true );
+                        $("#id_storage_product").prop('disabled', true).trigger('chosen:updated');
+                        $('#id_is_custom_price' ).attr('disabled', '');
+                    }
+                });
+
+                $("input[name=is_custom_price]").on('change', function() {
+                    if ($(this).prop('checked')) {
+                        $('#id_custom_price').removeAttr('disabled');
+                    } else {
+                        $('#id_custom_price').attr('disabled', '');
+                    }
+                });
+                //$("#id_storage_product").addClass('form-control');
+                $("#id_storage_product").chosen({allow_single_deselect:true});
+
+                $('#id_storage_product').on('change', function(event, params) {
+                    if(event.target == this){
+                        pk_list = $(this).val();
+                    }
+
+
+
+                    $.ajax({
+                        url: '/get_storage_price/',
+                        type: 'POST',
+                        data: JSON.stringify(pk_list),
+                        dataType: 'json',
+                        beforeSend: function (xhr, settings) {
+                            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                                xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}")
+                            }
+                        },
+                        success: function () {
+
+                        }
+                    }).done(function(data) {
+                        $("#storage-product-price").html('<span style="margin-top: 12px;display: inline-block;">Цена склада:&nbsp;</span><span>'+data.result+' р. </span>');
+                    });
+
+
+                });
+
+
+
+            });
+
+        </script>
+
+
+        <div class="panel panel-default">
+            <div class="panel-heading">Доставки</div>
+            <div class="panel-body">
+                
+                <table id="cache-log" class="table table-striped" cellspacing="0" width="100%">
+                    <thead>
+                        <tr>
+                            <th>Дата</th>
+                            <th>Документ</th>
+                            <th>Сумма</th>
+                            <th>Приход/Расход</th>
+                            <th>Магазин</th>
+
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in cash.all %}
+                        <tr>
+                            <td>{{ item.last_coming }}</td>
+                            <td><a href="{{ item.creator_url }}">{{ item.creator_url }}</a></td>
+                            <td>{{ item.sum }}</td>
+                            <td>{{ item.cash_type.name }}</td>
+                            <td>{{ item.own_shop }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+{% endblock %}

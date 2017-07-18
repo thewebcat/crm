@@ -1,0 +1,130 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html >
+<head>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <title>Панель управления</title>
+  <!-- jQuery -->
+  <script type="text/javascript" src="http://yastatic.net/jquery/2.1.1/jquery.min.js"></script>
+  <!-- jQuery UI -->
+  <script type="text/javascript" src="http://code.jquery.com/ui/1.12.0/jquery-ui.min.js"></script>
+
+  <!-- Latest compiled and minified JavaScript -->
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+  <!-- DataTables -->
+  <script type="text/javascript" src="https://cdn.datatables.net/1.10.13/js/jquery.dataTables.min.js"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/1.10.13/js/dataTables.bootstrap.min.js"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/rowreorder/1.2.0/js/dataTables.rowReorder.min.js"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.1.1/js/dataTables.responsive.min.js"></script>
+
+  <link rel="stylesheet" type="text/css" href="/static/privatemessages.css">
+  <script type="text/javascript" src="/static/jstz.min.js"></script>
+  <script type="text/javascript" src="/static/privatemessages.js"></script>
+
+  <script type="text/javascript" src="/static/js/jquery.formset.js"></script>
+  
+  <!-- Latest compiled and minified CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+  <!-- Optional theme -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.13/css/dataTables.bootstrap.min.css"/>
+
+  <!-- jQuery UI CSS -->
+  <link rel="stylesheet" type="text/css" href="http://code.jquery.com/ui/1.12.0/themes/smoothness/jquery-ui.css">
+
+  <link rel="stylesheet" href="{% static "css/chosen.min.css" %}">
+
+  <!-- Custom styles for this template -->
+  <link rel="stylesheet" href="{% static "css/dashboard.css" %}">
+
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+
+  <link rel="stylesheet" type="text/css" href="{% static "css/style.css" %}">
+  <script type="text/javascript">
+    $(document).ready(function () {
+      $('[data-toggle="offcanvas"]').click(function () {
+        $('.sidebar-offcanvas').toggleClass('active')
+      });
+    });
+  </script>
+  {% block head %}
+  {% endblock %}
+</head>
+<body>
+
+<nav class="navbar navbar-inverse navbar-fixed-top">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="#">Парель управления</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <div class="navbar-nav navbar-right" style="margin-right: 0">
+          <p class="navbar-text">Добро пожаловать: {{ request.user.username }}</p>
+          {% if not user.is_authenticated %}
+          <a href="/accounts/login" class="btn btn-success navbar-btn">Вход</a>
+          {% endif %}
+          <a href="/accounts/logout" class="btn btn-danger navbar-btn">Выход</a>
+      </div>
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="#">Главная панель</a></li>
+        <li><a href="#">Настройки</a></li>
+        <li><a href="#">Профиль</a></li>
+        <li><a href="#">Поддержка</a></li>
+      </ul>
+      <form class="navbar-form navbar-right">
+        <input type="text" class="form-control" placeholder="Поиск...">
+      </form>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-sm-3 col-md-2 sidebar sidebar-offcanvas">
+      <ul class="nav nav-sidebar">
+        <li {% block dashboard %}{% endblock %}><a href="/">Overview{% block dashboard-span %}{% endblock %}</a></li>
+        <li {% block delivery %}{% endblock %}><a href="/delivery/">Доставки{% block delivery-span %}{% endblock %}</a></li>
+        <li {% block storage %}{% endblock %}><a href="/storage/">Склад{% block storage-span %}{% endblock %}</a></li>
+        <li {% block cash %}{% endblock %}><a href="/cash/">Касса{% block cash-span %}{% endblock %}</a></li>
+      </ul>
+      <ul id="navbar1" class="nav nav-sidebar">
+        <li><a href="/messages/">Сообщения</a></li>
+      </ul>
+      <ul class="nav nav-sidebar">
+        <li><a href="">Template</a></li>
+      </ul>
+    </div>
+    <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+      <button type="button" class="pull-left btn btn-default visible-xs" data-toggle="offcanvas" aria-expanded="false" aria-controls="navbar">
+        <i class="fa fa-navicon"></i>
+      </button>
+      {% block content %}
+
+      {% endblock %}
+    </div>
+  </div>
+</div>
+
+
+<script src="{% static "js/moment-with-locales.js" %}" type="text/javascript"></script>
+<!-- <script src="{% static "js/bootstrap-datetimepicker.min.js" %}" type="text/javascript"></script> -->
+<script src="{% static "js/chosen.jquery.min.js" %}" type="text/javascript"></script>
+<script src="{% static "js/datepicker-ru.js" %}" type="text/javascript"></script>
+</body>
+</html>

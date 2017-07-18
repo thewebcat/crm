@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% load myfilters %}
+
+{% block delivery %}class="active"{% endblock %}  {% block delivery-span %}<span class="sr-only">(current)</span>{% endblock %}
+
+{% block content %}
+
+
+
+
+        <script>
+
+            $(document).ready( function () {
+
+                var myDate = new Date();
+                var displayTime = (myDate.getHours()<10?'0':'') + myDate.getHours() + ':' + (myDate.getMinutes()<10?'0':'') + myDate.getMinutes() + ':' + (myDate.getSeconds()<10?'0':'') + myDate.getSeconds();
+
+                $("input[type=submit], a, button").button();
+                //$('input').addClass("text ui-widget-content ui-corner-all");
+                //$('#add_new_goods').dialog();
+                
+                /* НАЧАЛО Приход товаров */
+                $(".add-goods-btn").on("click", function() {
+                    var add_dialog = $("#add-goods");
+                    var action = add_dialog.find('form').attr("action");
+                    action = action.replace("$", $(this).attr("id"));
+                    add_dialog.find("form").attr("action", action);
+                    add_dialog.find("#add-goods-time").val(displayTime);
+                    add_dialog.modal();
+                });
+                /* КОНЕЦ Приход товаров */
+
+                /* НАЧАЛО Списание товаров */
+                $(".remove-goods-btn").on("click", function() {
+                    var remove_dialog = $("#remove-goods");
+                    var action = remove_dialog.find('form').attr("action");
+                    action = action.replace("$", $(this).attr("id"));
+                    remove_dialog.find("form").attr("action", action);
+                    remove_dialog.find("#remove-goods-time").val(displayTime);
+                    remove_dialog.modal();
+                });
+                /* КОНЕЦ Списание товаров */
+
+                $("#id_delivery_date").datepicker({
+                    language: 'ru',
+                    format: 'yy-mm-dd',
+                    dateFormat: 'yy-mm-dd',
+                }).on("show", function() {
+                    //$(this).val("{{ form.delivery_date.value }}").datepicker('update');
+                });
+                //$("#id_delivery_date").datepicker("option", "dateFormat", "yy-mm-dd");
+                //$("#id_delivery_date").val("").datepicker('update');
+
+                //$("#own_shop").selectmenu();
+
+
+
+                $("input[name=is_custom_product]").on('change', function() {
+                    //console.log($(this).attr('id'));
+                    if ($(this).attr('id') == 'id_is_custom_product_0') {
+                        $('#id_custom_product').attr('disabled', '');
+                        $('#id_custom_price').attr('readonly', '');
+                        $('#id_is_custom_price' ).prop('checked', false );
+                        $("#id_storage_product").prop('disabled', false).trigger('chosen:updated');
+                        $('#id_is_custom_price' ).removeAttr('onclick');
+                    }
+                    if ($(this).attr('id') == 'id_is_custom_product_1') {
+                        $('#id_custom_product').removeAttr('disabled');
+                        $('#id_custom_price').removeAttr('readonly');
+                        $('#id_is_custom_price' ).prop('checked', true );
+                        $("#id_storage_product").prop('disabled', true).trigger('chosen:updated');
+                        $('#id_is_custom_price' ).attr('onclick', 'return false;');
+                    }
+                });
+
+                $("input[name=is_custom_price]").on('change', function() {
+                    if ($(this).prop('checked')) {
+                        $('#id_custom_price').removeAttr('readonly');
+                    } else {
+                        $('#id_custom_price').attr('readonly', '');
+                    }
+                });
+                //$("#id_storage_product").addClass('form-control');
+                $("#id_storage_product").chosen({allow_single_deselect:true});
+
+                $('#id_storage_product').on('change', function(event, params) {
+                    if(event.target == this){
+                        pk_list = $(this).val();
+                    }
+
+
+
+                    $.ajax({
+                        url: '/get_storage_price/',
+                        type: 'POST',
+                        data: JSON.stringify(pk_list),
+                        dataType: 'json',
+                        beforeSend: function (xhr, settings) {
+                            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                                xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}")
+                            }
+                        },
+                        success: function () {
+
+                        }
+                    }).done(function(data) {
+                        $("#storage-product-price").html('<span style="margin-top: 12px;display: inline-block;">Цена склада:&nbsp;</span><span>'+data.result+' р. </span>');
+                    });
+
+
+                });
+
+
+
+            });
+
+        </script>
+        <div class="panel panel-default">
+            <div class="panel-heading">Детали доставки № <span class="label label-default" style="">{{ delivery.id }}</span> | {{ delivery.date|date:"Y-m-d H:i" }}</div>
+            <div class="panel-body">
+                <div class="content-tabs" >
+
+                    <!-- Nav tabs -->
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li role="presentation" class="active"><a href="{% url 'delivery_edit' delivery.id %}">Детали</a></li>
+                        <li role="presentation"><a href="{% url 'delivery_status' delivery.id %}">Статусы</a></li>
+                    </ul>
+
+                    <!-- Tab panes -->
+                    <div class="tab-content">
+                        <div role="tabpanel" class="tab-pane active" id="home">
+                            <form action="{{ request.path }}" method="post" class="form-horizontal">
+                                {% csrf_token %}
+                                {{ form.non_field_errors }}
+                                <div class="form-group">
+                                    {{ form.shop.errors }}
+                                    <label for="{{ form.shop.id_for_label }}" class="col-sm-2 control-label">Выберите магазин</label>
+                                    <div class="col-sm-10">
+                                        {{ form.shop }}
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <div class="col-sm-6">
+                                        <div class="product-box">
+                                            <div class="radio" style="text-align: center;">
+                                              <label>
+                                                <input id="id_is_custom_product_0" name="is_custom_product" type="radio" value="False" {% if form.is_custom_product.value == False %}checked{% endif %}>
+                                              </label>
+                                            </div>
+                                            {{ form.storage_product.errors }}
+                                            <label for="{{ form.storage_product.id_for_label }}" class="control-label">Товары со склада</label>
+                                            
+                                            {{ formset.management_form }}
+                                            
+                                                <!-- <div class="form-group row link-formset">
+                                                    {% if forloop.first %}
+                                                        {% for hidden in form.hidden_fields %}
+                                                            {{ hidden }}
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                    <label class="sr-only" for="{{ form.product.id_for_label }}">Товар</label>
+                                                    <div class="col-sm-6">
+                                                        {{ form.product.errors }}
+                                                        
+                                                        {{ form.product }}
+                                                    </div>
+                                                    <label class="col-sm-2 control-label" for="{{ form.count.id_for_label }}">Количество</label>
+                                                    <div class="col-sm-2">
+                                                        {{ form.count.errors }}
+                                                        
+                                                        {{ form.count }}
+                                                    </div>
+                                                    <div class="col-sm-2">
+                                                        {{ from.delete }}
+                                                    </div>
+                                                </div> -->
+                                            {% for form in formset.forms %}
+                                                <div id="{{ form.prefix }}-row" class="form-group row link-formset ">
+                                                    {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                                                    <label class="sr-only" for="{{ form.product.id_for_label }}">Товар</label>
+                                                    <div class="col-sm-6">
+                                                        {{ form.product.errors }}
+                                                        
+                                                        {{ form.product }}
+                                                    </div>
+                                                    <label class="col-sm-2 control-label" for="{{ form.count.id_for_label }}">Количество</label>
+                                                    <div class="col-sm-2">
+                                                        {{ form.count.errors }}
+                                                        
+                                                        {{ form.count }}
+                                                    </div>
+                                                    <div class="col-sm-2">
+                                                        {% if form.instance.pk %}{{ form.DELETE }}{% endif %}
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                            <script type="text/javascript">
+                                                $(function() {
+                                                    $('.link-formset').formset({
+                                                        addText: 'Добавить товар',
+                                                        deleteText: 'Удалить',
+                                                        prefix: 'deliveryproduct_set'
+                                                    });
+                                                });
+                                            </script>
+                                            <div id="storage-product-price"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="product-box">
+                                            <div class="radio" style="text-align: center;">
+                                              <label>
+                                                <input id="id_is_custom_product_1" name="is_custom_product" type="radio" value="True" {% if form.is_custom_product.value == True %}checked{% endif %}>
+                                              </label>
+                                            </div>
+                                            {{ form.custom_product.errors }}
+                                            <label for="{{ form.custom_product.id_for_label }}" class="control-label">Другой товар</label>
+                                            {% if form.is_custom_product.value == True %}
+                                                {{ form.custom_product }}
+                                            {% else %}
+                                                {{ form.custom_product|addattr:"disabled," }}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="{{ form.custom_price.id_for_label }}" class="col-sm-2 control-label">Своя цена</label>
+                                    <div class="col-sm-10">
+                                        <div class="input-group">
+                                            <span class="input-group-addon">
+                                                <input id="id_is_custom_price" name="is_custom_price" type="checkbox" {% if form.is_custom_price.value == True %}checked onclick="return false;"{% endif %}>
+                                            </span>
+                                            {% if form.is_custom_price.value == True %}
+                                                {{ form.custom_price }}
+                                            {% else %}
+                                                {{ form.custom_price|addattr:"readonly," }}
+                                            {% endif %}
+                                        </div><!-- /input-group -->
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    {{ form.delivery_fromclient.errors }}
+                                    <label for="{{ form.delivery_fromclient.id_for_label }}" class="col-sm-2 control-label">Доставка с клиента</label>
+                                    <div class="col-sm-10">
+                                        {{ form.delivery_fromclient }}
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    {{ form.delivery_price.errors }}
+                                    <label for="{{ form.delivery_price.id_for_label }}" class="col-sm-2 control-label">Стоимость доставки партнера</label>
+                                    <div class="col-sm-10">
+                                        {{ form.delivery_price }}
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    {{ form.delivery_date.errors }}
+                                    <label for="{{ form.delivery_date.id_for_label }}" class="col-sm-2 control-label">Дата доставки</label>
+                                    <div class="col-sm-10">
+                                        {{ form.delivery_date }}
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    {{ form.address.errors }}
+                                    <label for="{{ form.address.id_for_label }}" class="col-sm-2 control-label">Адрес доставки</label>
+                                    <div class="col-sm-10">
+                                        {{ form.address }}
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    {{ form.phone.errors }}
+                                    <label for="{{ form.phone.id_for_label }}" class="col-sm-2 control-label">Телефон клиента</label>
+                                    <div class="col-sm-10">
+                                        {{ form.phone }}
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    {{ form.time.errors }}
+                                    <label for="{{ form.time.id_for_label }}" class="col-sm-2 control-label">Время доставки</label>
+                                    <div class="col-sm-10">
+                                        {{ form.time }}
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    {{ form.courier.errors }}
+                                    <label for="{{ form.courier.id_for_label }}" class="col-sm-2 control-label">Курьер</label>
+                                    <div class="col-sm-10">
+                                        {{ form.courier }}
+                                    </div>
+                                </div>
+
+                                <input class="btn btn-success" type="submit" value="Обновить" />
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">История изменений</div>
+            <div class="panel-body">
+                <table id="delivery" class="table table-striped" cellspacing="0" width="100%" style="    overflow: scroll;">
+                    <thead>
+                        <tr>
+                            <th>Дата</th>
+                            <th>Изменения</th>
+                            <th>Магазин</th>
+                            <th>Пользователь</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in deliverylog %}
+                        <tr>
+                            <td>{{ item.date|date:"d.m.Y H:i:s" }}</td>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.shop }}</td>
+                            <td>{{ item.user }}</td>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+{% endblock %}
